@@ -13,13 +13,32 @@ import userRoutes from "./routes/users.js";
 import postRoutes from "./routes/posts.js";
 import reviewRoutes from "./routes/reviews.js";
 import tipRoutes from "./routes/tips.js";
-
+import enforce from 'express-sslify';
 import { register } from "./controllers/auth.js";
 import { createPost } from "./controllers/posts.js";
 import { createTip, editTip } from "./controllers/tips.js";
 import { editPost } from "./controllers/posts.js";
 import { verifyToken } from "./middleware/auth.js";
-import { editUser } from "./controllers/users.js";
+import { editUser, initiateClickup } from "./controllers/users.js";
+
+import fs from 'fs';
+import https from 'https';
+
+
+
+
+const privateKey = fs.readFileSync('server.key', 'utf8');
+const certificate = fs.readFileSync('server.cert', 'utf8');
+
+const credentials = { key: privateKey, cert: certificate };
+
+
+
+/*
+httpsServer.listen(port, () => {
+    console.log(`Server is running on https://localhost:${port}`);
+});*/
+
 
 /* CONFIGURATIONS */
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +53,10 @@ app.use(bodyParser.json({ limit: "30mb", extended: true }));
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
 app.use(cors());
 app.use("/assets", express.static(path.join(__dirname, "public/assets")));
+if (process.env.NODE_ENV === 'production') {
+  app.use(enforce.HTTPS({ trustProtoHeader: true }));
+}
+const httpsServer = https.createServer(credentials, app);
 
 /* FILE STORAGE */
 const storage = multer.diskStorage({
@@ -50,7 +73,8 @@ const upload = multer({ storage });
 app.post("/auth/register", upload.single("picture"), register);
 
 app.post("/posts", verifyToken, upload.single("picture"), createPost);
-// app.post("/posts", verifyToken, upload.single("video"), createPost);
+app.get("/click",  initiateClickup);
+
 
 app.post(
   "/users/:id/edit",
@@ -105,7 +129,7 @@ mongoose
     useUnifiedTopology: true,
   })
   .then(() => {
-    app.listen(PORT, () => console.log(`Server Port: ${PORT}`));
+    httpsServer.listen(PORT, () => console.log(`Server Port: ${PORT}`));
 
     /* ADD THE DATA ONE TIME */
     // User.insertMany(users);

@@ -20,6 +20,11 @@ const UserSchema = new mongoose.Schema(
       max: 50,
       unique: true,
     },
+      access_token: {
+        type: String,
+        max: 50,
+        unique: true,
+    },
     password: {
       type: String,
       required: true,
